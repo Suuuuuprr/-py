@@ -1,169 +1,46 @@
-
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-21
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-import discord
-import asyncio
-import youtube_dl
-import os
 from discord.ext import commands
-from discord.ext.commands import Bot
+import discord, chalk
 
+bot = commands.Bot(command_prefix="#", status=discord.Status.idle, activity=discord.Game(name="Booting.."))
 
-bot=commands.Bot(command_prefix='-')
-
-from discord import opus
-OPUS_LIBS = ['libopus-0.x86.dll', 'libopus-0.x64.dll',
-             'libopus-0.dll', 'libopus.so.0', 'libopus.0.dylib']
-
-
-def load_opus_lib(opus_libs=OPUS_LIBS):
-    if opus.is_loaded():
-        return True
-
-    for opus_lib in opus_libs:
-            try:
-                opus.load_opus(opus_lib)
-                return
-            except OSError:
-                pass
-
-    raise RuntimeError('Could not load an opus lib. Tried %s' %
-                       (', '.join(opus_libs)))
-load_opus_lib()
-
-
+bot.remove_command("help")
 
 @bot.event
 async def on_ready():
-    print("hi")
-opts = {
-            'default_search': 'auto',
-            'quiet': True,
-        }    
-    
-@bot.command(pass_context=True)
-async def join(ctx):
-    channel = ctx.message.author.voice.voice_channel
-    await bot.join_voice_channel(channel)
+    print(chalk.green("Ready to go!"))
+    print(chalk.blue(f"Serving: {len(bot.guilds)} guilds."))
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="Active!"))
 
+@bot.command()
+async def ping(ctx):
+    ping_ = bot.latency
+    ping = round(ping_ * 1000)
+    await ctx.channel.send(f"My ping is {ping}ms")
 
+@bot.command()
+async def user(ctx, member:discord.User = None):
+    if member == None:
+        member = ctx.message.author
+        pronoun = "Your"
+    else:
+        pronoun = "Their"
+    name = f"{member.name}#{member.discriminator}"
+    status = member.status
+    joined = member.joined_at
+    role = member.top_role
+    await ctx.channel.send(f"{pronoun} name is {name}. {pronoun} status is {status}. They joined at {joined}. {pronoun} rank is {role}.")
 
-players={}
-@bot.command(pass_context=True)
-async def play(ctx, *,url):
-    global play_server
-    play_server = ctx.message.server
-    voice = bot.voice_client_in(play_server)
-    global player
-    player = await voice.create_ytdl_player(url,ytdl_options=opts)
-    players[play_server.id] = player
-    if player.is_live == True:
-        await bot.say("Can not play live audio yet.")
-    elif player.is_live == False:
-        player.start()
-
-
-async def pause(ctx):
-    player.pause()
-
-@bot.command(pass_context=True)
-async def resume(ctx):
-    player.resume()
-          
-@bot.command(pass_context=True)
-async def volume(ctx, vol):
-    vol = float(vol)
-    vol = player.volume = vol
-
-@bot.command(pass_context=True)
-async def stop(ctx):
-    server=ctx.message.server
-    voice_client=bot.voice_client_in(server)
-    await voice_client.disconnect()
-
+@bot.command()
+async def ban(ctx, member:discord.User = None, reason = None):
+    if member == None or member == ctx.message.author:
+        await ctx.channel.send("You cannot ban yourself!")
+        return
+    if reason == None:
+        reason = "No reason at all!"
+    message = f"You have been banned from {ctx.guild.name} for {reason}!"
+    await member.send(message)
+    await ctx.guild.ban(member)
+    await ctx.channel.send(f"{member} is banned!")
 
 
 bot.run(os.environ['BOT_TOKEN'])
